@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Calendario de Contenido — Grupo My Day</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --violet-700:#5C3FB0; --violet-500:#8B6FDA; --violet-50:#F4F1FC; --line:#E6E1F2;
+
+  /* My Day — negro / dorado / editorial */
+  --myday-bg:#0D0D0D; --myday-gold:#C7A24A; --myday-gold-l:#F3E7C8; --myday-txt:#F5F0E3;
+  /* Chic — periwinkle / blanco */
+  --chic-500:#8B9AD6; --chic-50:#F0F2FC; --chic-900:#2E3560;
+  /* Rocking Rentals — pink / naranja / crema */
+  --rock-pink:#E0679F; --rock-orange:#E8A165; --rock-50:#FBF6EA; --rock-900:#7A3357;
+  /* Print MKTG — navy / naranja / blanco */
+  --print-navy:#122240; --print-orange:#EFA736; --print-50:#EEF1F6; --print-900:#122240;
+
+  --ink:#241C3A; --sub:#6E6484; --card:#FFFFFF; --bg:#FAF8FD; --radius:14px;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Poppins',-apple-system,sans-serif;background:var(--bg);color:var(--ink);}
+.wrap{max-width:1200px;margin:0 auto;padding:32px 24px 80px;}
+header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-bottom:22px;}
+h1{font-family:'Poppins',sans-serif;font-size:27px;font-weight:700;margin:0 0 4px;color:var(--ink);}
+.sub{color:var(--sub);font-size:14px;margin:0;font-weight:300;}
+.btn{border:none;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;transition:.15s;font-family:'Poppins',sans-serif;}
+.btn-primary{background:var(--ink);color:#fff;}
+.btn-primary:hover{background:#000;}
+.btn-ghost{background:#fff;color:var(--ink);border:1px solid var(--line);}
+.btn-ghost:hover{background:var(--violet-50);}
+
+.brandbar-select{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+.bchip{display:flex;align-items:center;gap:8px;padding:8px 16px 8px 10px;border-radius:24px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid var(--line);background:#fff;color:var(--sub);}
+.bchip img{width:26px;height:26px;border-radius:50%;object-fit:cover;}
+.bchip.active{border-width:2px;color:#fff;}
+.bchip.active[data-brand="myday"]{background:var(--myday-bg);border-color:var(--myday-bg);}
+.bchip.active[data-brand="chic"]{background:var(--chic-500);border-color:var(--chic-500);}
+.bchip.active[data-brand="rocking"]{background:var(--rock-pink);border-color:var(--rock-pink);}
+.bchip.active[data-brand="print"]{background:var(--print-navy);border-color:var(--print-navy);}
+.bchip.active[data-brand="all"]{background:var(--ink);border-color:var(--ink);}
+
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+.spacer{flex:1;}
+select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;background:#fff;color:var(--ink);font-family:'Poppins',sans-serif;}
+
+.viewtabs{display:flex;gap:4px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:4px;}
+.viewtab{padding:6px 14px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;color:var(--sub);}
+.viewtab.active{background:var(--violet-50);color:var(--violet-700);}
+
+/* Calendar */
+#calHead{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
+#calHead div{text-align:center;font-size:12px;color:var(--sub);font-weight:600;text-transform:uppercase;}
+#calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.day{min-height:96px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px;position:relative;}
+.day.empty{background:transparent;border:none;}
+.daynum{font-size:12px;color:var(--sub);font-weight:600;margin-bottom:4px;}
+.piece{font-size:11px;padding:3px 6px;border-radius:6px;margin-bottom:3px;cursor:grab;font-weight:600;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff;}
+.piece.dragging{opacity:.4;}
+.day.dragover{background:var(--violet-50);border-color:var(--violet-500);border-style:dashed;}
+.piece.myday{background:var(--myday-bg);border-left:3px solid var(--myday-gold);}
+.piece.chic{background:var(--chic-500);border-left:3px solid var(--chic-900);}
+.piece.rocking{background:var(--rock-pink);border-left:3px solid var(--rock-orange);}
+.piece.print{background:var(--print-navy);border-left:3px solid var(--print-orange);}
+
+/* Board (list) view */
+#board{display:none;flex-direction:column;gap:10px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;display:flex;gap:14px;align-items:flex-start;}
+.brandbar{width:5px;align-self:stretch;border-radius:4px;}
+.brandbar.myday{background:var(--myday-bg);}
+.brandbar.chic{background:var(--chic-500);}
+.brandbar.rocking{background:var(--rock-pink);}
+.brandbar.print{background:var(--print-navy);}
+.cardbody{flex:1;min-width:0;}
+.cardtop{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
+.ctitle{font-weight:600;font-size:15px;margin:0 0 3px;}
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+.tag{font-size:11px;padding:2px 9px;border-radius:12px;font-weight:600;}
+.tag.pillar{background:var(--violet-50);color:var(--violet-700);}
+.tag.date{background:var(--bg);color:var(--sub);border:1px solid var(--line);}
+.tag.brandtag{display:flex;align-items:center;gap:5px;color:#fff;}
+.tag.brandtag img{width:14px;height:14px;border-radius:50%;object-fit:cover;}
+.tag.brandtag.myday{background:var(--myday-bg);}
+.tag.brandtag.chic{background:var(--chic-500);}
+.tag.brandtag.rocking{background:var(--rock-pink);}
+.tag.brandtag.print{background:var(--print-navy);}
+.status{font-size:11px;padding:4px 11px;border-radius:20px;font-weight:700;white-space:nowrap;}
+.status.idea{background:#EFEDF7;color:#6E6484;}
+.status.diseno{background:#FDF3DA;color:#8C6E23;}
+.status.aprobado{background:#E2F5E9;color:#1E6B44;}
+.status.programado{background:var(--violet-50);color:var(--violet-700);}
+.insp{margin-top:8px;font-size:13px;color:var(--sub);background:var(--bg);border-radius:8px;padding:8px 10px;display:flex;gap:8px;align-items:flex-start;font-weight:300;}
+.insp a{color:var(--violet-700);}
+.rowbtns{display:flex;gap:6px;margin-top:8px;}
+.smallbtn{font-size:12px;padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:#fff;cursor:pointer;color:var(--sub);font-family:'Poppins',sans-serif;}
+.smallbtn:hover{background:var(--bg);}
+.smallbtn.del{color:#B23434;}
+
+/* Modal */
+#overlay{display:none;position:fixed;inset:0;background:rgba(36,28,58,.4);align-items:center;justify-content:center;z-index:50;padding:20px;}
+#modal{background:#fff;border-radius:16px;padding:26px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;}
+#modal h2{margin:0 0 16px;font-size:18px;font-family:'Poppins',sans-serif;}
+.field{margin-bottom:13px;}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--sub);margin-bottom:5px;}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:14px;font-family:'Poppins',sans-serif;}
+.field textarea{resize:vertical;min-height:60px;}
+.modalbtns{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;}
+.note{font-size:12px;color:var(--sub);background:var(--bg);border-radius:8px;padding:10px;margin-top:16px;font-weight:300;}
+.empty-state{text-align:center;padding:50px 20px;color:var(--sub);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Hub de contenido</h1>
+      <p class="sub">Grupo My Day — calendario vivo de ideas, aprobación e inspiración</p>
+    </div>
+    <button class="btn btn-primary" id="btnNew">+ Nueva idea</button>
+  </header>
+
+  <div class="brandbar-select">
+    <div class="bchip active" data-brand="all">Todas las marcas</div>
+    <div class="bchip" data-brand="myday"><img src="myday.jpg" alt="">My Day Events</div>
+    <div class="bchip" data-brand="chic"><img src="chic.jpg" alt="">Chic by My Day</div>
+    <div class="bchip" data-brand="rocking"><img src="rocking.jpg" alt="">Rocking Rentals</div>
+    <div class="bchip" data-brand="print"><img src="print.jpg" alt="">Print Marketing</div>
+  </div>
+
+  <div class="toolbar">
+    <select id="filterStatus">
+      <option value="">Todos los estados</option>
+      <option value="idea">Idea</option>
+      <option value="diseno">En diseño</option>
+      <option value="aprobado">Aprobado</option>
+      <option value="programado">Programado</option>
+    </select>
+    <div class="spacer"></div>
+    <div class="viewtabs">
+      <div class="viewtab active" data-view="calendar">Calendario</div>
+      <div class="viewtab" data-view="board">Lista</div>
+    </div>
+  </div>
+
+  <div id="monthNav" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+    <button class="smallbtn" id="prevMonth">←</button>
+    <strong id="monthLabel" style="font-size:14px;"></strong>
+    <button class="smallbtn" id="nextMonth">→</button>
+  </div>
+
+  <div id="calHead"></div>
+  <div id="calGrid"></div>
+  <div id="board"></div>
+  <div id="emptyState" class="empty-state">Todavía no hay ideas cargadas. Crea la primera con "+ Nueva idea".</div>
+</div>
+
+<div id="overlay">
+  <div id="modal">
+    <h2>Nueva idea de contenido</h2>
+    <input type="hidden" id="editId">
+    <div class="field">
+      <label>Marca</label>
+      <select id="fBrand">
+        <option value="myday">My Day Events</option>
+        <option value="chic">Chic by My Day</option>
+        <option value="rocking">Rocking Rentals</option>
+        <option value="print">Print Marketing</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Título / idea</label>
+      <input type="text" id="fTitle" placeholder="Ej: Backstage armado de salón — boda 200 invitados">
+    </div>
+    <div class="field">
+      <label>Pilar de contenido</label>
+      <select id="fPillar"></select>
+    </div>
+    <div class="field">
+      <label>Inspiración para diseño (link, referencia o descripción visual)</label>
+      <textarea id="fInsp" placeholder="Ej: Reel estilo cámara en mano, luz natural. Link: https://..."></textarea>
+    </div>
+    <div class="field">
+      <label>Fecha de publicación</label>
+      <input type="date" id="fDate">
+    </div>
+    <div class="field">
+      <label>Estado</label>
+      <select id="fStatus">
+        <option value="idea">Idea</option>
+        <option value="diseno">En diseño</option>
+        <option value="aprobado">Aprobado</option>
+        <option value="programado">Programado</option>
+      </select>
+    </div>
+    <div class="modalbtns">
+      <button class="btn btn-ghost" id="btnCancel">Cancelar</button>
+      <button class="btn btn-primary" id="btnSave">Guardar</button>
+    </div>
+    <div class="note">Este hub vive en Supabase: todo lo que agreguen aquí (tú, tu socio o diseño) lo ve el resto del equipo automáticamente, sin necesidad de cuentas ni login.</div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://jysdguvuwjkwzrwhnnnp.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5c2RndXZ1d2prd3pyd2hubm5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzMDkyNjksImV4cCI6MjA5OTg4NTI2OX0.NiSJnGmZGIQKzka7aX3z0P3gpxSTh02807ETOwUO4WA";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const LOGOS = { myday:"myday.jpg", chic:"chic.jpg", rocking:"rocking.jpg", print:"print.jpg" };
+const BRAND_NAMES = { myday:"My Day Events", chic:"Chic by My Day", rocking:"Rocking Rentals", print:"Print Marketing" };
+const PILLARS = {
+  myday: ["Mary en primera persona","Problema → Solución","Proceso / backstage","Corporativo"],
+  chic: ["El caos que resolvemos","Antes / Después","Celebra en pequeño con estilo","Divertido / Comunidad"],
+  rocking: ["Piezas destacadas del inventario","Antes / Después de montaje","Detrás de cámara del equipo","Tips para eventos"],
+  print: ["Proceso creativo / fabricación","Antes / Después de producción","Casos de éxito de clientes","Detrás de cámara del estudio"]
+};
+let items = [];
+let currentView = "calendar";
+let currentBrand = "all";
+let cursor = new Date();
+cursor.setDate(1);
+
+function statusLabel(s){ return {idea:"Idea",diseno:"En diseño",aprobado:"Aprobado",programado:"Programado"}[s]||s; }
+
+async function loadItems(){
+  const { data, error } = await sb.from("content_pieces").select("*").order("created_at", { ascending: true });
+  if(error){ console.error(error); items = []; render(); return; }
+  items = (data||[]).map(r => ({ id:r.id, brand:r.brand, title:r.title, pillar:r.pillar, insp:r.insp, date:r.date, status:r.status }));
+  render();
+}
+async function saveItem(it){
+  const { error } = await sb.from("content_pieces").upsert(it, { onConflict: "id" });
+  if(error){ console.error(error); alert("No se pudo guardar. Intenta de nuevo."); }
+}
+async function deleteItem(id){
+  const { error } = await sb.from("content_pieces").delete().eq("id", id);
+  if(error){ console.error(error); alert("No se pudo eliminar. Intenta de nuevo."); }
+}
+
+function openModal(existing){
+  document.querySelector("#modal h2").textContent = existing ? "Editar idea" : "Nueva idea de contenido";
+  document.getElementById("editId").value = existing ? existing.id : "";
+  document.getElementById("fBrand").value = existing ? existing.brand : "myday";
+  updatePillarOptions();
+  document.getElementById("fTitle").value = existing ? existing.title : "";
+  document.getElementById("fPillar").value = existing ? existing.pillar : PILLARS.myday[0];
+  document.getElementById("fInsp").value = existing ? existing.insp : "";
+  document.getElementById("fDate").value = existing ? existing.date : defaultDateForNewPiece();
+  document.getElementById("fStatus").value = existing ? existing.status : "idea";
+  document.getElementById("overlay").style.display = "flex";
+}
+function closeModal(){ document.getElementById("overlay").style.display = "none"; }
+function defaultDateForNewPiece(){
+  const today = new Date();
+  // si el mes que se está viendo es el actual, usa hoy; si no, usa el día 1 de ese mes
+  let base = (cursor.getFullYear()===today.getFullYear() && cursor.getMonth()===today.getMonth())
+    ? today : new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+  const y = base.getFullYear(), m = String(base.getMonth()+1).padStart(2,"0"), d = String(base.getDate()).padStart(2,"0");
+  return `${y}-${m}-${d}`;
+}
+function updatePillarOptions(){
+  const brand = document.getElementById("fBrand").value;
+  const sel = document.getElementById("fPillar");
+  sel.innerHTML = PILLARS[brand].map(p=>`<option value="${p}">${p}</option>`).join("");
+}
+document.getElementById("fBrand").addEventListener("change", updatePillarOptions);
+document.getElementById("btnNew").addEventListener("click", ()=>openModal(null));
+document.getElementById("btnCancel").addEventListener("click", closeModal);
+document.getElementById("overlay").addEventListener("click", e=>{ if(e.target.id==="overlay") closeModal(); });
+
+document.getElementById("btnSave").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  if(btn.disabled) return;
+  const title = document.getElementById("fTitle").value.trim();
+  if(!title){ alert("Escribe un título para la idea."); return; }
+  btn.disabled = true;
+  btn.style.opacity = "0.6";
+  btn.style.cursor = "not-allowed";
+  try{
+    const id = document.getElementById("editId").value || ("id"+Date.now());
+    const it = {
+      id, brand: document.getElementById("fBrand").value,
+      title, pillar: document.getElementById("fPillar").value,
+      insp: document.getElementById("fInsp").value.trim(),
+      date: document.getElementById("fDate").value.trim(),
+      status: document.getElementById("fStatus").value
+    };
+    await saveItem(it);
+    closeModal();
+    await loadItems();
+  } finally {
+    btn.disabled = false;
+    btn.style.opacity = "";
+    btn.style.cursor = "";
+  }
+});
+
+document.querySelectorAll(".bchip").forEach(c=>{
+  c.addEventListener("click", ()=>{
+    document.querySelectorAll(".bchip").forEach(x=>x.classList.remove("active"));
+    c.classList.add("active");
+    currentBrand = c.dataset.brand;
+    render();
+  });
+});
+document.getElementById("filterStatus").addEventListener("change", render);
+document.querySelectorAll(".viewtab").forEach(t=>{
+  t.addEventListener("click", ()=>{
+    document.querySelectorAll(".viewtab").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active");
+    currentView = t.dataset.view;
+    document.getElementById("monthNav").style.display = currentView==="calendar" ? "flex":"none";
+    document.getElementById("calHead").style.display = currentView==="calendar" ? "grid":"none";
+    document.getElementById("calGrid").style.display = currentView==="calendar" ? "grid":"none";
+    document.getElementById("board").style.display = currentView==="board" ? "flex":"none";
+    render();
+  });
+});
+document.getElementById("prevMonth").addEventListener("click", ()=>{ cursor.setMonth(cursor.getMonth()-1); render(); });
+document.getElementById("nextMonth").addEventListener("click", ()=>{ cursor.setMonth(cursor.getMonth()+1); render(); });
+
+function filtered(){
+  const st = document.getElementById("filterStatus").value;
+  return items.filter(it => (currentBrand==="all" || it.brand===currentBrand) && (!st || it.status===st));
+}
+function renderCalendarHead(){
+  const days=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+  document.getElementById("calHead").innerHTML = days.map(d=>`<div>${d}</div>`).join("");
+}
+
+function render(){
+  renderCalendarHead();
+  const list = filtered();
+  document.getElementById("emptyState").style.display = items.length===0 ? "block" : "none";
+
+  const monthNames=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  document.getElementById("monthLabel").textContent = monthNames[cursor.getMonth()]+" "+cursor.getFullYear();
+
+  const grid = document.getElementById("calGrid");
+  grid.innerHTML="";
+  const year=cursor.getFullYear(), month=cursor.getMonth();
+  const firstDow = new Date(year,month,1).getDay();
+  const daysInMonth = new Date(year,month+1,0).getDate();
+  for(let i=0;i<firstDow;i++){ grid.insertAdjacentHTML("beforeend", `<div class="day empty"></div>`); }
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = year+"-"+String(month+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+    const dayItems = list.filter(it=>it.date===dateStr);
+    const cell = document.createElement("div");
+    cell.className="day";
+    cell.dataset.date = dateStr;
+    cell.innerHTML = `<div class="daynum">${d}</div>` + dayItems.map(it=>
+      `<div class="piece ${it.brand}" draggable="true" data-id="${it.id}">${it.title}</div>`
+    ).join("");
+    grid.appendChild(cell);
+  }
+  grid.querySelectorAll(".piece").forEach(p=>{
+    p.addEventListener("click", ()=>{
+      const it = items.find(x=>x.id===p.dataset.id);
+      if(it) openModal(it);
+    });
+    p.addEventListener("dragstart", e=>{
+      p.classList.add("dragging");
+      e.dataTransfer.setData("text/plain", p.dataset.id);
+      e.dataTransfer.effectAllowed = "move";
+    });
+    p.addEventListener("dragend", ()=> p.classList.remove("dragging"));
+  });
+  grid.querySelectorAll(".day:not(.empty)").forEach(cell=>{
+    cell.addEventListener("dragover", e=>{ e.preventDefault(); cell.classList.add("dragover"); });
+    cell.addEventListener("dragleave", ()=> cell.classList.remove("dragover"));
+    cell.addEventListener("drop", async e=>{
+      e.preventDefault();
+      cell.classList.remove("dragover");
+      const id = e.dataTransfer.getData("text/plain");
+      const it = items.find(x=>x.id===id);
+      if(!it || it.date === cell.dataset.date) return;
+      it.date = cell.dataset.date;
+      await saveItem(it);
+      loadItems();
+    });
+  });
+
+  const board = document.getElementById("board");
+  board.innerHTML = list.slice().sort((a,b)=>(a.date||"").localeCompare(b.date||"")).map(it=>`
+    <div class="card">
+      <div class="brandbar ${it.brand}"></div>
+      <div class="cardbody">
+        <div class="cardtop">
+          <div>
+            <p class="ctitle">${it.title}</p>
+            <div class="meta">
+              <span class="tag pillar">${it.pillar}</span>
+              ${it.date ? `<span class="tag date">${it.date}</span>` : ""}
+              <span class="tag brandtag ${it.brand}"><img src="${LOGOS[it.brand]}" alt="">${BRAND_NAMES[it.brand]}</span>
+            </div>
+          </div>
+          <span class="status ${it.status}">${statusLabel(it.status)}</span>
+        </div>
+        ${it.insp ? `<div class="insp"><span>💡</span><span>${it.insp}</span></div>` : ""}
+        <div class="rowbtns">
+          <button class="smallbtn" data-edit="${it.id}">Editar</button>
+          <button class="smallbtn del" data-del="${it.id}">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  `).join("");
+  board.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>{
+    const it = items.find(x=>x.id===b.dataset.edit); if(it) openModal(it);
+  }));
+  board.querySelectorAll("[data-del]").forEach(b=>{
+    let confirming = false;
+    let resetTimer = null;
+    b.addEventListener("click", async ()=>{
+      if(!confirming){
+        confirming = true;
+        b.textContent = "¿Seguro? Confirmar";
+        b.style.background = "#FBEAEA";
+        b.style.borderColor = "#E4A0A0";
+        resetTimer = setTimeout(()=>{
+          confirming = false;
+          b.textContent = "Eliminar";
+          b.style.background = "";
+          b.style.borderColor = "";
+        }, 3000);
+        return;
+      }
+      clearTimeout(resetTimer);
+      b.disabled = true;
+      b.textContent = "Eliminando...";
+      await deleteItem(b.dataset.del);
+      await loadItems();
+    });
+  });
+}
+
+updatePillarOptions();
+document.getElementById("monthNav").style.display = "flex";
+loadItems();
+</script>
+</body>
+</html>
