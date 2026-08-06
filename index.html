@@ -2,23 +2,17 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Calendario de Contenido | Grupo My Day</title>
+<title>Calendario de Contenido — Grupo My Day</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
   --violet-700:#5C3FB0; --violet-500:#8B6FDA; --violet-50:#F4F1FC; --line:#E6E1F2;
-
-  /* My Day — negro / dorado / editorial */
   --myday-bg:#0D0D0D; --myday-gold:#C7A24A; --myday-gold-l:#F3E7C8; --myday-txt:#F5F0E3;
-  /* Chic — periwinkle / blanco */
   --chic-500:#8B9AD6; --chic-50:#F0F2FC; --chic-900:#2E3560;
-  /* Rocking Rentals — pink / naranja / crema */
   --rock-pink:#E0679F; --rock-orange:#E8A165; --rock-50:#FBF6EA; --rock-900:#7A3357;
-  /* Print MKTG — navy / naranja / blanco */
   --print-navy:#122240; --print-orange:#EFA736; --print-50:#EEF1F6; --print-900:#122240;
-
   --ink:#241C3A; --sub:#6E6484; --card:#FFFFFF; --bg:#FAF8FD; --radius:14px;
 }
 *{box-sizing:border-box;}
@@ -51,22 +45,20 @@ select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size
 .viewtab{padding:6px 14px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;color:var(--sub);}
 .viewtab.active{background:var(--violet-50);color:var(--violet-700);}
 
-/* Calendar */
 #calHead{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
 #calHead div{text-align:center;font-size:12px;color:var(--sub);font-weight:600;text-transform:uppercase;}
 #calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
 .day{min-height:96px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px;position:relative;}
 .day.empty{background:transparent;border:none;}
+.day.dragover{background:var(--violet-50);border-color:var(--violet-500);border-style:dashed;}
 .daynum{font-size:12px;color:var(--sub);font-weight:600;margin-bottom:4px;}
 .piece{font-size:11px;padding:3px 6px;border-radius:6px;margin-bottom:3px;cursor:grab;font-weight:600;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff;}
 .piece.dragging{opacity:.4;}
-.day.dragover{background:var(--violet-50);border-color:var(--violet-500);border-style:dashed;}
 .piece.myday{background:var(--myday-bg);border-left:3px solid var(--myday-gold);}
 .piece.chic{background:var(--chic-500);border-left:3px solid var(--chic-900);}
 .piece.rocking{background:var(--rock-pink);border-left:3px solid var(--rock-orange);}
 .piece.print{background:var(--print-navy);border-left:3px solid var(--print-orange);}
 
-/* Board (list) view */
 #board{display:none;flex-direction:column;gap:10px;}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;display:flex;gap:14px;align-items:flex-start;}
 .brandbar{width:5px;align-self:stretch;border-radius:4px;}
@@ -93,13 +85,12 @@ select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size
 .status.aprobado{background:#E2F5E9;color:#1E6B44;}
 .status.programado{background:var(--violet-50);color:var(--violet-700);}
 .insp{margin-top:8px;font-size:13px;color:var(--sub);background:var(--bg);border-radius:8px;padding:8px 10px;display:flex;gap:8px;align-items:flex-start;font-weight:300;}
-.insp a{color:var(--violet-700);}
+.cardimg{margin-top:10px;max-width:220px;border-radius:8px;display:block;cursor:pointer;}
 .rowbtns{display:flex;gap:6px;margin-top:8px;}
 .smallbtn{font-size:12px;padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:#fff;cursor:pointer;color:var(--sub);font-family:'Poppins',sans-serif;}
 .smallbtn:hover{background:var(--bg);}
 .smallbtn.del{color:#B23434;}
 
-/* Modal */
 #overlay{display:none;position:fixed;inset:0;background:rgba(36,28,58,.4);align-items:center;justify-content:center;z-index:50;padding:20px;}
 #modal{background:#fff;border-radius:16px;padding:26px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;}
 #modal h2{margin:0 0 16px;font-size:18px;font-family:'Poppins',sans-serif;}
@@ -110,6 +101,10 @@ select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size
 .modalbtns{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;}
 .note{font-size:12px;color:var(--sub);background:var(--bg);border-radius:8px;padding:10px;margin-top:16px;font-weight:300;}
 .empty-state{text-align:center;padding:50px 20px;color:var(--sub);}
+
+/* Lightbox para ver imagen en grande */
+#lightbox{display:none;position:fixed;inset:0;background:rgba(13,13,13,.9);align-items:center;justify-content:center;z-index:60;padding:24px;}
+#lightbox img{max-width:100%;max-height:90vh;border-radius:8px;}
 </style>
 </head>
 <body>
@@ -183,6 +178,14 @@ select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size
       <textarea id="fInsp" placeholder="Ej: Reel estilo cámara en mano, luz natural. Link: https://..."></textarea>
     </div>
     <div class="field">
+      <label>Imagen de ejemplo (opcional)</label>
+      <input type="file" id="fImage" accept="image/*">
+      <div id="imgPreviewWrap" style="display:none;margin-top:8px;position:relative;">
+        <img id="imgPreview" style="max-width:100%;max-height:180px;border-radius:8px;display:block;">
+        <button type="button" id="btnRemoveImg" style="position:absolute;top:6px;right:6px;background:rgba(36,28,58,.8);color:#fff;border:none;border-radius:6px;padding:4px 9px;font-size:11px;cursor:pointer;">Quitar</button>
+      </div>
+    </div>
+    <div class="field">
       <label>Fecha de publicación</label>
       <input type="date" id="fDate">
     </div>
@@ -203,6 +206,8 @@ select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size
   </div>
 </div>
 
+<div id="lightbox"><img id="lightboxImg" src=""></div>
+
 <script>
 const SUPABASE_URL = "https://jysdguvuwjkwzrwhnnnp.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5c2RndXZ1d2prd3pyd2hubm5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzMDkyNjksImV4cCI6MjA5OTg4NTI2OX0.NiSJnGmZGIQKzka7aX3z0P3gpxSTh02807ETOwUO4WA";
@@ -221,13 +226,14 @@ let currentView = "calendar";
 let currentBrand = "all";
 let cursor = new Date();
 cursor.setDate(1);
+let pendingImage = null; // base64 de la imagen seleccionada en el formulario
 
 function statusLabel(s){ return {idea:"Idea",diseno:"En diseño",aprobado:"Aprobado",programado:"Programado"}[s]||s; }
 
 async function loadItems(){
   const { data, error } = await sb.from("content_pieces").select("*").order("created_at", { ascending: true });
   if(error){ console.error(error); items = []; render(); return; }
-  items = (data||[]).map(r => ({ id:r.id, brand:r.brand, title:r.title, pillar:r.pillar, insp:r.insp, date:r.date, status:r.status }));
+  items = (data||[]).map(r => ({ id:r.id, brand:r.brand, title:r.title, pillar:r.pillar, insp:r.insp, date:r.date, status:r.status, image_data:r.image_data||null }));
   render();
 }
 async function saveItem(it){
@@ -239,6 +245,48 @@ async function deleteItem(id){
   if(error){ console.error(error); alert("No se pudo eliminar. Intenta de nuevo."); }
 }
 
+// Comprime la imagen en el navegador antes de guardarla (máx 900px de ancho, calidad 0.75)
+function compressImage(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const maxW = 900;
+        const scale = Math.min(1, maxW/img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width*scale;
+        canvas.height = img.height*scale;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.75));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById("fImage").addEventListener("change", async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    const compressed = await compressImage(file);
+    pendingImage = compressed;
+    document.getElementById("imgPreview").src = compressed;
+    document.getElementById("imgPreviewWrap").style.display = "block";
+  }catch(err){
+    alert("No se pudo procesar la imagen. Intenta con otra.");
+  }
+});
+document.getElementById("btnRemoveImg").addEventListener("click", ()=>{
+  pendingImage = null;
+  document.getElementById("fImage").value = "";
+  document.getElementById("imgPreviewWrap").style.display = "none";
+});
+
 function openModal(existing){
   document.querySelector("#modal h2").textContent = existing ? "Editar idea" : "Nueva idea de contenido";
   document.getElementById("editId").value = existing ? existing.id : "";
@@ -249,12 +297,19 @@ function openModal(existing){
   document.getElementById("fInsp").value = existing ? existing.insp : "";
   document.getElementById("fDate").value = existing ? existing.date : defaultDateForNewPiece();
   document.getElementById("fStatus").value = existing ? existing.status : "idea";
+  document.getElementById("fImage").value = "";
+  pendingImage = existing && existing.image_data ? existing.image_data : null;
+  if(pendingImage){
+    document.getElementById("imgPreview").src = pendingImage;
+    document.getElementById("imgPreviewWrap").style.display = "block";
+  } else {
+    document.getElementById("imgPreviewWrap").style.display = "none";
+  }
   document.getElementById("overlay").style.display = "flex";
 }
 function closeModal(){ document.getElementById("overlay").style.display = "none"; }
 function defaultDateForNewPiece(){
   const today = new Date();
-  // si el mes que se está viendo es el actual, usa hoy; si no, usa el día 1 de ese mes
   let base = (cursor.getFullYear()===today.getFullYear() && cursor.getMonth()===today.getMonth())
     ? today : new Date(cursor.getFullYear(), cursor.getMonth(), 1);
   const y = base.getFullYear(), m = String(base.getMonth()+1).padStart(2,"0"), d = String(base.getDate()).padStart(2,"0");
@@ -285,7 +340,8 @@ document.getElementById("btnSave").addEventListener("click", async (e)=>{
       title, pillar: document.getElementById("fPillar").value,
       insp: document.getElementById("fInsp").value.trim(),
       date: document.getElementById("fDate").value.trim(),
-      status: document.getElementById("fStatus").value
+      status: document.getElementById("fStatus").value,
+      image_data: pendingImage
     };
     await saveItem(it);
     closeModal();
@@ -330,6 +386,8 @@ function renderCalendarHead(){
   document.getElementById("calHead").innerHTML = days.map(d=>`<div>${d}</div>`).join("");
 }
 
+document.getElementById("lightbox").addEventListener("click", ()=>{ document.getElementById("lightbox").style.display="none"; });
+
 function render(){
   renderCalendarHead();
   const list = filtered();
@@ -351,7 +409,7 @@ function render(){
     cell.className="day";
     cell.dataset.date = dateStr;
     cell.innerHTML = `<div class="daynum">${d}</div>` + dayItems.map(it=>
-      `<div class="piece ${it.brand}" draggable="true" data-id="${it.id}">${it.title}</div>`
+      `<div class="piece ${it.brand}" draggable="true" data-id="${it.id}">${it.image_data ? "🖼 " : ""}${it.title}</div>`
     ).join("");
     grid.appendChild(cell);
   }
@@ -399,6 +457,7 @@ function render(){
           <span class="status ${it.status}">${statusLabel(it.status)}</span>
         </div>
         ${it.insp ? `<div class="insp"><span>💡</span><span>${it.insp}</span></div>` : ""}
+        ${it.image_data ? `<img class="cardimg" src="${it.image_data}" data-lightbox="${it.id}">` : ""}
         <div class="rowbtns">
           <button class="smallbtn" data-edit="${it.id}">Editar</button>
           <button class="smallbtn del" data-del="${it.id}">Eliminar</button>
@@ -409,6 +468,13 @@ function render(){
   board.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>{
     const it = items.find(x=>x.id===b.dataset.edit); if(it) openModal(it);
   }));
+  board.querySelectorAll(".cardimg").forEach(img=>{
+    img.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      document.getElementById("lightboxImg").src = img.src;
+      document.getElementById("lightbox").style.display = "flex";
+    });
+  });
   board.querySelectorAll("[data-del]").forEach(b=>{
     let confirming = false;
     let resetTimer = null;
