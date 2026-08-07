@@ -57,6 +57,11 @@ select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size
 .status-dot.cs-aprobado{background:#3FA671;color:#fff;}
 .status-dot.cs-cambios{background:#E0952E;color:#fff;}
 .status-dot.cs-pendiente{background:#C94F4F;color:#fff;}
+.format-dot{position:absolute;bottom:4px;right:4px;display:flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;z-index:2;font-size:9px;font-weight:700;background:#2E5FA3;color:#fff;box-shadow:0 0 0 1.5px rgba(255,255,255,.9);}
+.format-pill{position:absolute;bottom:4px;right:4px;display:flex;align-items:center;gap:3px;background:rgba(255,255,255,.92);backdrop-filter:blur(3px);color:#4A4456;font-size:8px;font-weight:600;padding:2px 7px 2px 5px;border-radius:20px;z-index:2;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.15);max-width:calc(100% - 8px);}
+.format-pill .ficon{font-size:7px;flex-shrink:0;opacity:.8;}
+.format-pill span{overflow:hidden;text-overflow:ellipsis;}
+.format-pill .ficon{font-size:8px;flex-shrink:0;}
 .piece.has-img{padding:0;aspect-ratio:1/1;height:auto;}
 .piece.has-img img.thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
 .piece.has-img span.txt{position:absolute;left:0;right:0;bottom:0;padding:5px 6px 4px;background:linear-gradient(to top, rgba(0,0,0,.75), rgba(0,0,0,0));white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
@@ -81,6 +86,8 @@ select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size
 .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
 .tag{font-size:11px;padding:2px 9px;border-radius:12px;font-weight:600;}
 .tag.pillar{background:var(--violet-50);color:var(--violet-700);}
+.tag.format{background:#EAF1FB;color:#2E5FA3;display:inline-flex;align-items:center;gap:5px;}
+.tag.format .ficon{width:14px;height:14px;border-radius:50%;background:#2E5FA3;color:#fff;font-size:8px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
 .tag.date{background:var(--bg);color:var(--sub);border:1px solid var(--line);}
 .tag.brandtag{display:flex;align-items:center;gap:5px;color:#fff;}
 .tag.brandtag img{width:14px;height:14px;border-radius:50%;object-fit:cover;}
@@ -223,6 +230,14 @@ select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size
       <select id="fPillar"></select>
     </div>
     <div class="field">
+      <label>Formato</label>
+      <select id="fFormat">
+        <option value="post">Post estático</option>
+        <option value="carrusel">Carrusel</option>
+        <option value="reel">Reel</option>
+      </select>
+    </div>
+    <div class="field">
       <label>Inspiración para diseño (link, referencia o descripción visual)</label>
       <textarea id="fInsp" placeholder="Ej: Reel estilo cámara en mano, luz natural. Link: https://..."></textarea>
     </div>
@@ -277,6 +292,9 @@ cursor.setDate(1);
 let pendingImages = []; // arreglo de hasta 4 imágenes en base64 del formulario
 
 function statusLabel(s){ return {idea:"Idea",diseno:"En diseño",aprobado:"Aprobado",programado:"Programado"}[s]||s; }
+function formatLabel(f){ return {post:"Post estático",carrusel:"Carrusel",reel:"Reel"}[f]||"Post estático"; }
+function formatLabelShort(f){ return {post:"Post",carrusel:"Carrusel",reel:"Reel"}[f]||"Post"; }
+function formatIcon(f){ return {post:"▪",carrusel:"⧉",reel:"▶"}[f]||"▪"; }
 function linkify(text){
   if(!text) return "";
   const escaped = text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -286,7 +304,7 @@ function linkify(text){
 async function loadItems(){
   const { data, error } = await sb.from("content_pieces").select("*").order("created_at", { ascending: true });
   if(error){ console.error(error); items = []; render(); return; }
-  items = (data||[]).map(r => ({ id:r.id, brand:r.brand, title:r.title, pillar:r.pillar, insp:r.insp, date:r.date, status:r.status, images: parseImages(r.image_data), client_status: r.client_status || "pendiente", client_comment: r.client_comment || "", detail: r.idea_detail || "" }));
+  items = (data||[]).map(r => ({ id:r.id, brand:r.brand, title:r.title, pillar:r.pillar, insp:r.insp, date:r.date, status:r.status, images: parseImages(r.image_data), client_status: r.client_status || "pendiente", client_comment: r.client_comment || "", detail: r.idea_detail || "", format: r.format || "post" }));
   render();
 }
 function parseImages(raw){
@@ -371,6 +389,7 @@ function snapshotForm(){
     brand: document.getElementById("fBrand").value,
     title: document.getElementById("fTitle").value,
     detail: document.getElementById("fDetail").value,
+    format: document.getElementById("fFormat").value,
     pillar: document.getElementById("fPillar").value,
     insp: document.getElementById("fInsp").value,
     date: document.getElementById("fDate").value,
@@ -386,6 +405,7 @@ function openModal(existing){
   updatePillarOptions();
   document.getElementById("fTitle").value = existing ? existing.title : "";
   document.getElementById("fDetail").value = existing ? existing.detail : "";
+  document.getElementById("fFormat").value = existing ? existing.format : "post";
   document.getElementById("fPillar").value = existing ? existing.pillar : PILLARS.myday[0];
   document.getElementById("fInsp").value = existing ? existing.insp : "";
   document.getElementById("fDate").value = existing ? existing.date : defaultDateForNewPiece();
@@ -443,6 +463,7 @@ document.getElementById("btnSave").addEventListener("click", async (e)=>{
       title, pillar: document.getElementById("fPillar").value,
       insp: document.getElementById("fInsp").value.trim(),
       idea_detail: document.getElementById("fDetail").value.trim(),
+      format: document.getElementById("fFormat").value,
       date: document.getElementById("fDate").value.trim(),
       status: document.getElementById("fStatus").value,
       image_data: pendingImages.length ? JSON.stringify(pendingImages) : null
@@ -515,7 +536,7 @@ function render(){
     cell.dataset.date = dateStr;
     cell.innerHTML = `<div class="daynum">${d}</div>` + dayItems.map(it=>{
       const hasImg = it.images && it.images.length;
-      return `<div class="piece ${it.brand}${hasImg ? " has-img" : ""}" draggable="true" data-id="${it.id}"><span class="status-dot cs-${it.client_status}">${it.client_status==="aprobado"?"✓":it.client_status==="cambios"?"✎":"◔"}</span>${hasImg ? `<img class="thumb" src="${it.images[0]}">` : ""}${hasImg && it.images.length>1 ? `<span class="imgcount">+${it.images.length-1}</span>` : ""}<span class="txt">${it.title}</span></div>`;
+      return `<div class="piece ${it.brand}${hasImg ? " has-img" : ""}" draggable="true" data-id="${it.id}"><span class="status-dot cs-${it.client_status}">${it.client_status==="aprobado"?"✓":it.client_status==="cambios"?"✎":"◔"}</span><span class="format-pill"><span class="ficon">${formatIcon(it.format)}</span><span>${formatLabelShort(it.format)}</span></span>${hasImg ? `<img class="thumb" src="${it.images[0]}">` : ""}${hasImg && it.images.length>1 ? `<span class="imgcount">+${it.images.length-1}</span>` : ""}<span class="txt">${it.title}</span></div>`;
     }).join("");
     grid.appendChild(cell);
   }
@@ -557,6 +578,7 @@ function render(){
             ${it.detail ? `<p style="font-size:13px;color:var(--sub);font-weight:300;margin:0 0 6px;line-height:1.5;">${it.detail}</p>` : ""}
             <div class="meta">
               <span class="tag pillar">${it.pillar}</span>
+              <span class="tag format"><span class="ficon">${formatIcon(it.format)}</span>${formatLabel(it.format)}</span>
               ${it.date ? `<span class="tag date">${it.date}</span>` : ""}
               <span class="tag brandtag ${it.brand}"><img src="${LOGOS[it.brand]}" alt="">${BRAND_NAMES[it.brand]}</span>
             </div>
@@ -591,7 +613,7 @@ function render(){
       const it = items.find(x=>x.id===b.dataset.review);
       if(!it) return;
       it.client_status = b.dataset.value;
-      await saveItem({ id: it.id, brand: it.brand, title: it.title, pillar: it.pillar, insp: it.insp, date: it.date, status: it.status, image_data: it.images.length ? JSON.stringify(it.images) : null, client_status: it.client_status, client_comment: it.client_comment, idea_detail: it.detail });
+      await saveItem({ id: it.id, brand: it.brand, title: it.title, pillar: it.pillar, insp: it.insp, date: it.date, status: it.status, image_data: it.images.length ? JSON.stringify(it.images) : null, client_status: it.client_status, client_comment: it.client_comment, idea_detail: it.detail, format: it.format });
       loadItems();
     });
   });
@@ -602,7 +624,7 @@ function render(){
       if(!it) return;
       const textarea = board.querySelector(`[data-comment="${id}"]`);
       it.client_comment = textarea.value.trim();
-      await saveItem({ id: it.id, brand: it.brand, title: it.title, pillar: it.pillar, insp: it.insp, date: it.date, status: it.status, image_data: it.images.length ? JSON.stringify(it.images) : null, client_status: it.client_status, client_comment: it.client_comment, idea_detail: it.detail });
+      await saveItem({ id: it.id, brand: it.brand, title: it.title, pillar: it.pillar, insp: it.insp, date: it.date, status: it.status, image_data: it.images.length ? JSON.stringify(it.images) : null, client_status: it.client_status, client_comment: it.client_comment, idea_detail: it.detail, format: it.format });
       const note = board.querySelector(`[data-savednote="${id}"]`);
       note.style.display = "inline";
       setTimeout(()=>{ note.style.display = "none"; }, 2000);
